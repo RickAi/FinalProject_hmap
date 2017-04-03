@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HeatMap</title>
+
+    {% load static %}
+    <link rel="stylesheet" href="{% static "map/css/leaflet.css" %}" />
+    <script src="{% static "map/js/leaflet_src.js" %}"></script>
+    <script src="{% static "map/js/leaflet_heat.js" %}"></script>
+    <script src="{% static "map/js/leaflet_baidu.js" %}"></script>
+    <script src="{% static "map/js/baiduMapAPI_2.0_min.js" %}"></script>
+    <script type="javascript">window.BMAP_AUTHENTIC_KEY = "148ba719517de5b636685962d779d367";</script>
+
+    <style>
+        html, body {
+          height: 100%;
+          margin: 0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+
+<script>
+        var options = {
+              crs: L.CRS.EPSGB3857,
+              center: [39.928879, 116.402831],
+              zoom: 10
+        };
+
+        var baseMaps = {
+              Normal: new L.TileLayer.BaiduLayer("Normal.Map"),
+              satellite: new L.TileLayer.BaiduLayer("Satellite.Map"),
+              road: new L.TileLayer.BaiduLayer("Satellite.Road"),
+              cnormal: new L.TileLayer.BaiduLayer("CustomStyle.Map.normal"),
+              light: new L.TileLayer.BaiduLayer("CustomStyle.Map.light"),
+              dark: new L.TileLayer.BaiduLayer("CustomStyle.Map.dark"),
+              redalert: new L.TileLayer.BaiduLayer("CustomStyle.Map.redalert"),
+              googlelite: new L.TileLayer.BaiduLayer("CustomStyle.Map.googlelite"),
+              grassgreen: new L.TileLayer.BaiduLayer("CustomStyle.Map.grassgreen"),
+              midnight: new L.TileLayer.BaiduLayer("CustomStyle.Map.midnight"),
+              pink: new L.TileLayer.BaiduLayer("CustomStyle.Map.pink"),
+              darkgreen: new L.TileLayer.BaiduLayer("CustomStyle.Map.darkgreen"),
+              bluish: new L.TileLayer.BaiduLayer("CustomStyle.Map.bluish"),
+              grayscale: new L.TileLayer.BaiduLayer("CustomStyle.Map.grayscale"),
+              hardedge: new L.TileLayer.BaiduLayer("CustomStyle.Map.hardedge"),
+              mysytle: new L.TileLayer.BaiduLayer("CustomStyle.Map", {styles: 't%3Abuilding%7Ce%3Ag%7Cc%3A%23cccccc%2Ct%3Aroad%7Ce%3Aall%7Cc%3A%23999999%2Ct%3Aland%7Ce%3Aall%7Cc%3A%2376a5af%2Ct%3Agreen%7Ce%3Aall%7Cc%3A%236aa84f%2Ct%3Amanmade%7Ce%3Aall%7Cc%3A%23eeeeee%2Ct%3Aboundary%7Ce%3Aall%7Cc%3A%23444444'})
+        };
+
+        options.layers = [baseMaps.Normal];
+        var map = L.map("map", options);
+        L.control.layers(baseMaps).addTo(map);
+
+        var raw = [{% for item in datas  %}[{{ item.0 }}, {{ item.1 }}, {{ item.2 }}],{% endfor %}];
+
+        var heat = L.heatLayer(raw).addTo(map);
+
+</script>
+</body>
+</html>
