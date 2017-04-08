@@ -1,6 +1,12 @@
-from django.shortcuts import render_to_response
+import ast
 
-from map.models import HouseRent
+from django.db.models import Avg
+from django.db.models import Max
+from django.db.models import Min
+from django.shortcuts import render_to_response
+from map.models import *
+
+import json
 
 
 def index(request):
@@ -41,4 +47,42 @@ def point_map(request):
 
 
 def choropleth_map(request):
-    return render_to_response('choropleth_map.html')
+    geojson, max_avg = build_geojson()
+    stages = build_stages(max_avg)
+    return render_to_response('choropleth_map.html', {'datas': geojson, 'stages': stages})
+
+
+def build_geojson():
+    geojson = {'type': "FeatureCollection"}
+
+    geo_list = []
+    avg_list = []
+    for geo_info in Geoinfo.objects.all():
+        properties = ast.literal_eval(geo_info.properties)
+        geometry = ast.literal_eval(geo_info.geometry)
+
+        # query from database
+        properties['avg_roi'] = RoiResult.objects.filter(district=geo_info.district).aggregate(Avg('roi')).get(
+            'roi__avg')
+        properties['max_roi'] = RoiResult.objects.filter(district=geo_info.district).aggregate(Max('roi')).get(
+            'roi__max')
+        # properties['min_roi'] = RoiResult.objects.filter(district=geo_info.district).aggregate(Min('roi')).get('roi__min')
+
+        if properties['avg_roi'] is not None:
+            avg_list.append(properties['avg_roi'])
+
+        feature = {'type': "Feature", 'properties': properties, 'geometry': geometry}
+        geo_list.append(feature)
+
+    geojson['features'] = geo_list
+    return json.dumps(geojson), max(avg_list)
+
+
+def build_stages(max_avg):
+    interval = max_avg / 8.0
+    stages = []
+
+    for cur in range(0, 8):
+        stages.append("%.3f" % round(0 + cur * interval, 2))
+
+    return stages

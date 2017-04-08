@@ -27,6 +27,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['hmap.navyblue.top', '127.0.0.1', 'localhost']
 
+CRONJOBS = [
+    ('34 05 * * *', 'map.roi.crontab_roi')
+]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -37,6 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'map.apps.MapConfig',
+    'django_crontab',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
