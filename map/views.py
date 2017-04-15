@@ -2,7 +2,6 @@ import ast
 
 from django.db.models import Avg
 from django.db.models import Max
-from django.db.models import Min
 from django.shortcuts import render_to_response
 from map.models import *
 
@@ -49,7 +48,8 @@ def point_map(request):
 def choropleth_map(request):
     geojson, max_avg = build_geojson()
     stages = build_stages(max_avg)
-    return render_to_response('choropleth_map.html', {'datas': geojson, 'stages': stages})
+    rois = query_rois()
+    return render_to_response('choropleth_map.html', {'geojson': geojson, 'stages': stages, 'rois': rois})
 
 
 def build_geojson():
@@ -86,3 +86,14 @@ def build_stages(max_avg):
         stages.append("%.3f" % round(0 + cur * interval, 2))
 
     return stages
+
+def query_rois():
+    roi_results = RoiResult.objects.all()
+
+    points = list()
+    for roi_result in roi_results:
+        if roi_result.latitude == 0 or roi_result.longitude == 0:
+            continue
+        points.append([roi_result.latitude, roi_result.longitude, str(roi_result.id)])
+
+    return points
