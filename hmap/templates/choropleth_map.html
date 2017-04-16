@@ -19,6 +19,7 @@
     <script src="{% static "map/js/baiduMapAPI_2.0_min.js" %}"></script>
     <script src="{% static "map/js/leaflet.markercluster_src.js" %}"></script>
     <script src="{% static "map/js/leaflet_sidebar.js" %}"></script>
+    <script src="{% static "map/js/Chart.min.js" %}"></script>
 
     <script type="javascript">window.BMAP_AUTHENTIC_KEY = "148ba719517de5b636685962d779d367";</script>
 </head>
@@ -43,19 +44,20 @@
         <div class="sidebar-content">
             <div class="sidebar-pane" id="home">
                 <h1 class="sidebar-header">
-                    sidebar-v2
+                    Overall
                     <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                 </h1>
 
-                <p>A responsive sidebar for mapping libraries like <a href="http://leafletjs.com/">Leaflet</a> or <a href="http://openlayers.org/">OpenLayers</a>.</p>
-
-                <p class="lorem">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
-
-                <p class="lorem">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
-
-                <p class="lorem">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
-
-                <p class="lorem">Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.</p>
+                <br>
+                <p>Show HouseCount-District with PieChart</p>
+                <canvas id="piechart"></canvas>
+                <br>
+                <p>Show HouseROI-Date with LineChart</p>
+                <canvas id="linechart"></canvas>
+                <br>
+                <p>Show HouseArea-Range with PolarChart</p>
+                <canvas id="polarchart"></canvas>
+                <br>
             </div>
 
             <div class="sidebar-pane" id="profile">
@@ -105,28 +107,6 @@
             var sidebar = L.control.sidebar('sidebar');
             map.addControl(sidebar);
 
-            // Add GeoJSON
-            geojson = {{ geojson|safe }};
-            grades = {{ stages|safe }};
-            L.geoJson(geojson, {
-                style: function style(feature) {
-                    return {
-                        fillColor: getColor(feature.properties.avg_roi, grades),
-                        weight: 1,
-                        color: 'white',
-                        fillOpacity: 0.7
-                    };
-                },
-                onEachFeature: function (feature, layer) {
-                  layer.bindPopup(feature.properties.name + ": " + feature.properties.avg_roi);
-                  layer.on({
-                    click: function(event){
-                        // update sidebar content when boundary update
-                    }
-                  });
-                }
-            }).addTo(map);
-
             // Add legend
             var legend = L.control({position: 'bottomright'});
             legend.onAdd = function (map) {
@@ -144,38 +124,141 @@
             }
             legend.addTo(map);
 
-            // Build clusters
-            var markers = L.markerClusterGroup();
-            var markerList = [];
-            var raw = [{% for item in rois  %}[{{ item.0 }}, {{ item.1 }}, "{{ item.2 }}"],{% endfor %}];
-            for (var i = 0; i < raw.length; i++) {
-                var a = raw[i];
-                var roi_id = a[2];
-                var marker = L.marker(L.latLng(a[0], a[1]), {title: roi_id});
-                marker.bindPopup("Loading...");
+            // Build pie chart
+            var ctx = document.getElementById("piechart").getContext('2d');
+            var myChart = new Chart(ctx, {
+              type: 'pie',
+              data: {
+                labels: ["M", "T", "W", "T", "F", "S", "S"],
+                datasets: [{
+                  backgroundColor: [
+                    "#2ecc71",
+                    "#3498db",
+                    "#95a5a6",
+                    "#9b59b6",
+                    "#f1c40f",
+                    "#e74c3c",
+                    "#34495e"
+                  ],
+                  data: [12, 19, 3, 17, 28, 24, 7]
+                }]
+              }
+            });
 
-                // click event when point was clicked
-                marker.on('click', function (e) {
-                    var popup = e.target.getPopup();
-                    $.ajax({
-                        type: "GET",
-                        url: "../api/point_detail?roi_id=" + String(e.target.options.title),
-                        success : function(json) {
-                            popup.setContent($(L.HTMLUtils.buildTable(json)).wrap('<div/>').parent().html());
-                            popup.update();
-						},
-						error: function(){
-						    popup.setContent("<p>Query failed!</p>");
-                            popup.update();
-						}
-                    });
+            // Build line chart
+            var ctx = document.getElementById('linechart').getContext('2d');
+            var myChart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+                datasets: [{
+                  label: 'apples',
+                  data: [12, 19, 3, 17, 6, 3, 7],
+                  backgroundColor: "rgba(153,255,51,0.6)"
+                }]
+              }
+            });
+
+            // Build polar chart
+            var ctx = document.getElementById("polarchart").getContext('2d');
+                var myChart = new Chart(ctx, {
+                  type: 'polarArea',
+                  data: {
+                    labels: ["M", "T", "W", "T", "F", "S", "S"],
+                    datasets: [{
+                      backgroundColor: [
+                        "#2ecc71",
+                        "#3498db",
+                        "#95a5a6",
+                        "#9b59b6",
+                        "#f1c40f",
+                        "#e74c3c",
+                        "#34495e"
+                      ],
+                      data: [12, 19, 3, 17, 28, 24, 7]
+                    }]
+                  }
                 });
 
-                markerList.push(marker);
+            // build boundaries async
+            $.ajax({
+                type: "GET",
+                url: "../api/boundaries",
+                success : function(json) {
+                    buildBoundary(json);
+                },
+                error: function(){
+                    console.log("boundary load failed.")
+                }
+             });
+
+            // build clusters async
+            $.ajax({
+                type: "GET",
+                url: "../api/points",
+                success : function(json) {
+                    buildClusters(json);
+                },
+                error: function(){
+                    console.log("cluster load failed.")
+                }
+             });
+
+            function buildBoundary(boundaries){
+                grades = {{ stages|safe }};
+                L.geoJson(boundaries, {
+                    style: function style(feature) {
+                        return {
+                            fillColor: getColor(feature.properties.avg_roi, grades),
+                            weight: 1,
+                            color: 'white',
+                            fillOpacity: 0.7
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                      layer.bindPopup(feature.properties.name + ": " + feature.properties.avg_roi);
+                      layer.on({
+                        click: function(event){
+                            // update sidebar content when boundary update
+                        }
+                      });
+                    }
+                }).addTo(map);
             }
 
-            markers.addLayers(markerList);
-            map.addLayer(markers);
+            function buildClusters(points){
+                // Build clusters
+                var markers = L.markerClusterGroup();
+                var markerList = [];
+                for (var i = 0; i < points.length; i++) {
+                    var a = points[i];
+                    var roi_id = a[2];
+                    var marker = L.marker(L.latLng(a[0], a[1]), {title: roi_id});
+                    marker.bindPopup("Loading...");
+
+                    // click event when point was clicked
+                    marker.on('click', function (e) {
+                        var popup = e.target.getPopup();
+                        $.ajax({
+                            type: "GET",
+                            url: "../api/point_detail?roi_id=" + String(e.target.options.title),
+                            success : function(json) {
+                                popup.setContent($(L.HTMLUtils.buildTable(json)).wrap('<div/>').parent().html());
+                                popup.update();
+                            },
+                            error: function(){
+                                popup.setContent("<p>Query failed!</p>");
+                                popup.update();
+                            }
+                        });
+                    });
+
+                    markerList.push(marker);
+                }
+
+                markers.addLayers(markerList);
+                map.addLayer(markers);
+            }
 
             // get color according to average roi
             function getColor(roi, grades) {
