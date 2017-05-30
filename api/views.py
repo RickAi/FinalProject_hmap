@@ -68,4 +68,47 @@ def point_detail(request):
         json_result['total_price'] = sale.total_price
         json_result['source'] = sale.source
 
+    json_result['rent_id'] = roi.rent_id
+    json_result['sale_id'] = roi.sale_id
     return JsonResponse(json_result)
+
+def overall_housecount(request):
+    labels = []
+    backgroundColor = []
+    data = []
+
+    geoinfos = Geoinfo.objects.all().order_by('-house_count')[:4]
+    for geoinfo in geoinfos:
+        if geoinfo.house_count != 0:
+            labels.append(geoinfo.district)
+            backgroundColor.append(geoinfo.color)
+            data.append(geoinfo.house_count)
+
+    return JsonResponse({"labels": labels, "backgroundColor": backgroundColor, "data": data})
+
+def overall_avgroi(request):
+    labels = []
+    data = []
+
+    histories = ProcessHistory.objects.order_by('-process_date')[:7]
+    for history in histories:
+        labels.append(history.process_date)
+        data.append(history.avg_roi)
+
+    return JsonResponse({"labels": labels, "data": data})
+
+def boundary_housetype(request):
+    district = request.GET.get('district', '')
+    geoinfo = Geoinfo.objects.filter(district=district)[0]
+
+    if geoinfo is None:
+        return None
+
+    # room_info = ast.literal_eval(geoinfo.room_info)
+    # labels = list(room_info.keys())
+    # data = list(room_info.values())
+
+    return JsonResponse(ast.literal_eval(geoinfo.room_info))
+
+
+

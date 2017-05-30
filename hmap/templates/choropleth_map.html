@@ -24,15 +24,14 @@
     <script type="javascript">window.BMAP_AUTHENTIC_KEY = "148ba719517de5b636685962d779d367";</script>
 </head>
 <body>
+    <div id="boundary_popup"></div>
     <div id="map"></div>
     <div id="sidebar" class="sidebar collapsed">
         <!-- Nav tabs -->
         <div class="sidebar-tabs">
             <ul role="tablist">
                 <li><a href="#home" role="tab"><i class="fa fa-bars"></i></a></li>
-                <li><a href="#profile" role="tab"><i class="fa fa-user"></i></a></li>
-                <li class="disabled"><a href="#messages" role="tab"><i class="fa fa-envelope"></i></a></li>
-                <li><a href="https://github.com/Turbo87/sidebar-v2" role="tab" target="_blank"><i class="fa fa-github"></i></a></li>
+                <li><a href="https://github.com/YogiAi" role="tab" target="_blank"><i class="fa fa-github"></i></a></li>
             </ul>
 
             <ul role="tablist">
@@ -49,23 +48,13 @@
                 </h1>
 
                 <br>
-                <p>Show HouseCount-District with PieChart</p>
+                <p>House Count Percentage Per District</p>
                 <canvas id="piechart"></canvas>
-                <br>
-                <p>Show HouseROI-Date with LineChart</p>
+
+                <br><br><br>
+                <p>Housing ROI Trending In 7 Days</p>
                 <canvas id="linechart"></canvas>
                 <br>
-                <p>Show HouseArea-Range with PolarChart</p>
-                <canvas id="polarchart"></canvas>
-                <br>
-            </div>
-
-            <div class="sidebar-pane" id="profile">
-                <h1 class="sidebar-header">Profile<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
-            </div>
-
-            <div class="sidebar-pane" id="messages">
-                <h1 class="sidebar-header">Messages<span class="sidebar-close"><i class="fa fa-caret-left"></i></span></h1>
             </div>
 
             <div class="sidebar-pane" id="settings">
@@ -125,60 +114,49 @@
             legend.addTo(map);
 
             // Build pie chart
-            var ctx = document.getElementById("piechart").getContext('2d');
-            var myChart = new Chart(ctx, {
-              type: 'pie',
-              data: {
-                labels: ["M", "T", "W", "T", "F", "S", "S"],
-                datasets: [{
-                  backgroundColor: [
-                    "#2ecc71",
-                    "#3498db",
-                    "#95a5a6",
-                    "#9b59b6",
-                    "#f1c40f",
-                    "#e74c3c",
-                    "#34495e"
-                  ],
-                  data: [12, 19, 3, 17, 28, 24, 7]
-                }]
-              }
-            });
+            $.ajax({
+                type: "GET",
+                url: "../api/overall_housecount",
+                success : function(json) {
+                    var ctx = document.getElementById("piechart").getContext('2d');
+                    var myChart = new Chart(ctx, {
+                      type: 'pie',
+                      data: {
+                        labels: json["labels"],
+                        datasets: [{
+                          backgroundColor: json["backgroundColor"],
+                          data: json["data"]
+                        }]
+                      }
+                    });
+                },
+                error: function(){
+                    console.log("pie chart load failed.")
+                }
+             });
 
             // Build line chart
-            var ctx = document.getElementById('linechart').getContext('2d');
-            var myChart = new Chart(ctx, {
-              type: 'line',
-              data: {
-                labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
-                datasets: [{
-                  label: 'apples',
-                  data: [12, 19, 3, 17, 6, 3, 7],
-                  backgroundColor: "rgba(153,255,51,0.6)"
-                }]
-              }
-            });
-
-            // Build polar chart
-            var ctx = document.getElementById("polarchart").getContext('2d');
-                var myChart = new Chart(ctx, {
-                  type: 'polarArea',
-                  data: {
-                    labels: ["M", "T", "W", "T", "F", "S", "S"],
-                    datasets: [{
-                      backgroundColor: [
-                        "#2ecc71",
-                        "#3498db",
-                        "#95a5a6",
-                        "#9b59b6",
-                        "#f1c40f",
-                        "#e74c3c",
-                        "#34495e"
-                      ],
-                      data: [12, 19, 3, 17, 28, 24, 7]
-                    }]
-                  }
-                });
+            $.ajax({
+                type: "GET",
+                url: "../api/overall_avgroi",
+                success : function(json) {
+                    var ctx = document.getElementById('linechart').getContext('2d');
+                    var myChart = new Chart(ctx, {
+                      type: 'line',
+                      data: {
+                        labels: json["labels"],
+                        datasets: [{
+                          label: 'Average ROI',
+                          data: json["data"],
+                          backgroundColor: "rgba(153,255,51,0.6)"
+                        }]
+                      }
+                    });
+                },
+                error: function(){
+                    console.log("line chart load failed.")
+                }
+             });
 
             // build boundaries async
             $.ajax({
@@ -216,10 +194,24 @@
                         };
                     },
                     onEachFeature: function (feature, layer) {
-                      layer.bindPopup(feature.properties.name + ": " + feature.properties.avg_roi);
+                      // layer.bindPopup(feature.properties.name + ": " + feature.properties.avg_roi);
+                      layer.bindPopup("Loading...");
                       layer.on({
-                        click: function(event){
-                            // update sidebar content when boundary update
+                        click: function(e){
+                            // onBoundaryClick
+                            var popup = e.target.getPopup();
+                            $.ajax({
+                                type: "GET",
+                                url: "../api/boundary_housetype?district=" + e.target.feature.properties.name,
+                                success : function(json) {
+                                    popup.setContent($(L.HTMLUtils.buildTable(json)).wrap('<div/>').parent().html());
+                                    popup.update();
+                                },
+                                error: function(){
+                                    popup.setContent("<p>Query failed!</p>");
+                                    popup.update();
+                                }
+                            });
                         }
                       });
                     }
@@ -273,51 +265,51 @@
 
              L.HTMLUtils = {
                     buildTable: function (obj, className, ignoreFields) {
-                    className = className || 'table table-condensed table-striped table-bordered';
+                        className = className || 'table table-condensed table-striped table-bordered';
 
-                    var fragment = document.createDocumentFragment();
-                    var table = L.DomUtil.create('table', className, fragment);
-                    var thead = L.DomUtil.create('thead', '', table);
-                    var tbody = L.DomUtil.create('tbody', '', table);
+                        var fragment = document.createDocumentFragment();
+                        var table = L.DomUtil.create('table', className, fragment);
+                        var thead = L.DomUtil.create('thead', '', table);
+                        var tbody = L.DomUtil.create('tbody', '', table);
 
-                    var thead_tr = L.DomUtil.create('tr', '', thead);
-                    var thead_values = ['Name','Value'];
-                    for (var i = 0, l = thead_values.length; i < l; i++) {
-                        var thead_th = L.DomUtil.create('th', '', thead_tr);
-                        thead_th.innerHTML = thead_values[i];
-                    }
+                        var thead_tr = L.DomUtil.create('tr', '', thead);
+                        var thead_values = ['Name','Value'];
+                        for (var i = 0, l = thead_values.length; i < l; i++) {
+                            var thead_th = L.DomUtil.create('th', '', thead_tr);
+                            thead_th.innerHTML = thead_values[i];
+                        }
 
-                    ignoreFields = ignoreFields || [];
+                        ignoreFields = ignoreFields || [];
 
-                    function inArray(arrayObj, value) {
-                        for (var i = 0, l = arrayObj.length; i < l; i++) {
-                            if (arrayObj[i] === value) {
-                                return true;
+                        function inArray(arrayObj, value) {
+                            for (var i = 0, l = arrayObj.length; i < l; i++) {
+                                if (arrayObj[i] === value) {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }
+
+                        for (var property in obj) {
+                            if (obj.hasOwnProperty(property) && !inArray(ignoreFields, property)) {
+                                var value = obj[property];
+                                if (typeof value === 'object') {
+                                    var container = document.createElement('div');
+                                    container.appendChild(L.HTMLUtils.buildTable(value, className, ignoreFields));
+                                    value = container.innerHTML;
+                                }
+
+                                var tbody_tr = L.DomUtil.create('tr', '', tbody);
+                                var tbody_values = [property, value];
+                                for (i = 0, l = tbody_values.length; i < l; i++) {
+                                    var tbody_td = L.DomUtil.create('td', '', tbody_tr);
+                                    tbody_td.innerHTML = tbody_values[i];
+                                }
                             }
                         }
-                        return false;
+
+                        return table;
                     }
-
-                    for (var property in obj) {
-                        if (obj.hasOwnProperty(property) && !inArray(ignoreFields, property)) {
-                            var value = obj[property];
-                            if (typeof value === 'object') {
-                                var container = document.createElement('div');
-                                container.appendChild(L.HTMLUtils.buildTable(value, className, ignoreFields));
-                                value = container.innerHTML;
-                            }
-
-                            var tbody_tr = L.DomUtil.create('tr', '', tbody);
-                            var tbody_values = [property, value];
-                            for (i = 0, l = tbody_values.length; i < l; i++) {
-                                var tbody_td = L.DomUtil.create('td', '', tbody_tr);
-                                tbody_td.innerHTML = tbody_values[i];
-                            }
-                        }
-                    }
-
-                    return table;
-                }
             };
 
 </script>

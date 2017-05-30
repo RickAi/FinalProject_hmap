@@ -35,7 +35,7 @@ def heat_map(request):
 
 
 def point_map(request):
-    rents = HouseRent.objects.all()
+    rents = HouseSale.objects.all()
     datas = list()
     for rent in rents:
         if rent.latitude == 0 or rent.longitude == 0:

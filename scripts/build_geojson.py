@@ -10,7 +10,7 @@ def build_geojson():
     geo_list = []
     for geo_info in Geoinfo.objects.all():
         district = geo_info.district
-        properties = geo_info.properties
+        s = geo_info.properties
 
         # query from database
 

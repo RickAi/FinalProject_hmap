@@ -66,11 +66,12 @@ class RoiResult(models.Model):
 
 
 class ProcessHistory(models.Model):
-    process_date = models.DateField(blank=True, null=True)
+    process_date = models.DateField(unique=True, blank=True, null=True)
+    avg_roi = models.FloatField(blank=True, null=True)
 
     @classmethod
-    def create(cls, process_date):
-        return cls(process_date=process_date)
+    def create(cls, process_date, avg_roi):
+        return cls(process_date=process_date, avg_roi=avg_roi)
 
     class Meta:
         get_latest_by = "process_date"
@@ -81,7 +82,21 @@ class Geoinfo(models.Model):
     district = models.TextField()
     properties = models.TextField()
     geometry = models.TextField()
+    color = models.TextField(blank=True, null=True)
+    house_count = models.IntegerField(blank=True, null=True)
+    room_info = models.TextField(blank=True, null=True)
 
     @classmethod
     def create(cls, id, district, properties, geometry):
         return cls(id=id, district=district, properties=properties, geometry=geometry)
+
+class EvaluateData(models.Model):
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
+    rent_price = models.FloatField(blank=True, null=True)
+    sale_price = models.FloatField(blank=True, null=True)
+    house_area = models.FloatField(blank=True, null=True)
+
+    @classmethod
+    def create(cls, latitude, longitude, rent_price, sale_price, house_area):
+        return cls(latitude=latitude, longitude=longitude, rent_price=rent_price, sale_price=sale_price, house_area=house_area)
